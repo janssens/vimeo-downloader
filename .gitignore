@@ -1,0 +1,4 @@
+vendor/
+films/
+composer.lock
+.idea/

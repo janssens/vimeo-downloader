@@ -1,0 +1,16 @@
+{
+    "name": "janssens/vimeo-downloader",
+    "description": "a small php tool to download vimeo video",
+    "type": "library",
+    "require": {
+        "symfony/console": "^3.2",
+        "php-ffmpeg/php-ffmpeg": "^0.9.2"
+    },
+    "license": "gpl",
+    "authors": [
+        {
+            "name": "gjanssens",
+            "email": "janssensgaetan@gmail.com"
+        }
+    ]
+}
