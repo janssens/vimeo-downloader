@@ -25,7 +25,7 @@ class VimeoDownloaderCommand extends Command
 		->setDescription('Download Vimeo video')
 		->setHelp("This command allows you to download video from vimeo...")
 		->addArgument('video_files_directory', InputArgument::REQUIRED, 'directory of m4s video files')
-		->addArgument('audio_files_directory', InputArgument::REQUIRED, 'directory of m4s audio files')
+		->addArgument('audio_files_directory', InputArgument::OPTIONAL, 'directory of m4s audio files')
 		->addOption('first_index','f',InputOption::VALUE_OPTIONAL,'The first index, default is 1','1')
 		->addOption('last_index','l',InputOption::VALUE_OPTIONAL,'The last index, default is 500','500')
 		->addOption('segment_name_template','r',InputOption::VALUE_OPTIONAL,'The template, default is segment-{{index}}.m4s','segment-{{index}}.m4s')
@@ -46,9 +46,6 @@ class VimeoDownloaderCommand extends Command
 			'font-family' => "Times",
         );
 
-	    if ($this->isVerbose())
-            $this->_output->writeln("finale output is w".$this->_width." and h".$this->_height);
-
         $first_index = intval($this->_input->getOption('first_index'));
         $last_index = intval($this->_input->getOption('last_index'));
 
@@ -62,42 +59,67 @@ class VimeoDownloaderCommand extends Command
 
         $progress = new ProgressBar($this->_output, $last_index-$first_index);
 
-        $video_files = array();
-        $audio_files = array();
-        $files = array();
+//        $video_files = array();
+//        $audio_files = array();
+//        $files = array();
 
-        mkdir($output_dir.DIRECTORY_SEPARATOR."audio");
-        mkdir($output_dir.DIRECTORY_SEPARATOR."video");
+        if ($audio_files_directory){
+            if (!file_exists($output_dir.DIRECTORY_SEPARATOR."audio"))
+                mkdir($output_dir.DIRECTORY_SEPARATOR."audio");
+        }
+        if (!file_exists($output_dir.DIRECTORY_SEPARATOR."video"))
+            mkdir($output_dir.DIRECTORY_SEPARATOR."video");
 
         $final_video_output = $output_dir.DIRECTORY_SEPARATOR.'video.mp4';
-        $final_audio_output = $output_dir.DIRECTORY_SEPARATOR.'audio.mp4';
+        if ($audio_files_directory)
+            $final_audio_output = $output_dir.DIRECTORY_SEPARATOR.'audio.mp4';
 
         $filename = str_replace('{{index}}','0',$segment_name_template);
         $filename = str_replace('m4s','mp4',$filename);
         $content = file_get_contents($video_files_directory.$filename);
         file_put_contents($final_video_output,$content);
-        $content = file_get_contents($audio_files_directory.$filename);
-        file_put_contents($final_audio_output,$content);
+        if ($audio_files_directory){
+            $content = file_get_contents($audio_files_directory.$filename);
+            file_put_contents($final_audio_output,$content);
+        }
 
         for ($i = $first_index; $i <= $last_index; $i++){
             $filename = str_replace('{{index}}',$i,$segment_name_template);
             $local_filename = str_replace('{{index}}',sprintf("%04d", $i),$segment_name_template);
-            $content = file_get_contents($video_files_directory.$filename);
+            //video
             $output_path = $output_dir.DIRECTORY_SEPARATOR.'video'.DIRECTORY_SEPARATOR.$local_filename;
-            file_put_contents($output_path, $content);
+            $output->writeln($output_path,OutputInterface::VERBOSITY_DEBUG);
+            if (!file_exists($output_path)) {
+                $output->writeln('download video segment',OutputInterface::VERBOSITY_DEBUG);
+                $content = file_get_contents($video_files_directory . $filename);
+                file_put_contents($output_path, $content);
+            }else{
+                $output->writeln('load video segment from local',OutputInterface::VERBOSITY_DEBUG);
+                $content = file_get_contents($output_path);
+            }
             file_put_contents($final_video_output, $content,FILE_APPEND);
-            $video_files[] = $output_path;
-            $files[] = $output_path;
-            $content = file_get_contents($audio_files_directory.$filename);
-            $output_path = $output_dir.DIRECTORY_SEPARATOR.'audio'.DIRECTORY_SEPARATOR.$local_filename;
-            file_put_contents($final_audio_output, $content,FILE_APPEND);
-            file_put_contents($output_path, $content);
-            $audio_files[] = $output_path;
-            $files[] = $output_path;
+//            $video_files[] = $output_path;
+//            $files[] = $output_path;
+            //audio
+            if ($audio_files_directory) {
+                $output_path = $output_dir . DIRECTORY_SEPARATOR . 'audio' . DIRECTORY_SEPARATOR . $local_filename;
+                if (!file_exists($output_path)) {
+                    $output->writeln('download audio segment',OutputInterface::VERBOSITY_DEBUG);
+                    $content = file_get_contents($audio_files_directory . $filename);
+                    file_put_contents($output_path, $content);
+                }else{
+                    $output->writeln('load audio segment from local',OutputInterface::VERBOSITY_DEBUG);
+                    $content = file_get_contents($output_path);
+                }
+                file_put_contents($final_audio_output, $content, FILE_APPEND);
+//                $audio_files[] = $output_path;
+//                $files[] = $output_path;
+            }
             $progress->advance();
         }
 
         $progress->finish();
+        $output->writeln('');
 
 //        $ffmpeg = FFMpeg\FFMpeg::create();
 //        $video = $ffmpeg->open($files[0]);
